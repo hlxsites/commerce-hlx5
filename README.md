@@ -28,7 +28,7 @@ Before running the command, replace the following variables to match your projec
 * `{YOUR_TOKEN}` - Your personal access token. You can retrieve one from login via one of the methods from https://admin.hlx.page/login and copy the token from the `auth_token` cookie in the response.
 
 ```bash
-curl -v 'https://admin.hlx.page/config/{org}/sites/{site}.json' \
+curl -X POST 'https://admin.hlx.page/config/{org}/sites/{site}.json' \
   -H 'content-type: application/json' \
   -H 'x-auth-token: {YOUR_TOKEN}' \
   --data-binary '@default-config.json'
@@ -36,7 +36,7 @@ curl -v 'https://admin.hlx.page/config/{org}/sites/{site}.json' \
 
 ### Apply Index Configuration
 ```bash
-curl -v 'https://admin.hlx.page/config/{org}/sites/{site}/content/query.yaml' \
+curl -X POST 'https://admin.hlx.page/config/{org}/sites/{site}/content/query.yaml' \
   -H 'content-type: text/yaml' \
   -H 'x-auth-token: {YOUR_TOKEN}' \
   --data-binary '@default-query.yaml'
@@ -44,7 +44,7 @@ curl -v 'https://admin.hlx.page/config/{org}/sites/{site}/content/query.yaml' \
 
 ### Apply Sitemap Configuration
 ```bash
-curl -v 'https://admin.hlx.page/config/{org}/sites/{site}/content/sitemap.yaml' \
+curl -X POST 'https://admin.hlx.page/config/{org}/sites/{site}/content/sitemap.yaml' \
   -H 'content-type: text/yaml' \
   -H 'x-auth-token: {YOUR_TOKEN}' \
   --data-binary '@default-sitemap.yaml'
