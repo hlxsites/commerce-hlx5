@@ -8,3 +8,6 @@ test/*
 postinstall.js
 tools/picker/src/*
 tools/pdp-metadata/*
+default-config.json
+default-query.yaml
+default-sitemap.yaml
