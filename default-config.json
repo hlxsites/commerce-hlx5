@@ -12,6 +12,10 @@
         "source": {
             "url": "https://adobe.sharepoint.com/:f:/r/sites/HelixProjects/Shared%20Documents/sites/starter-content-commerce",
             "type": "onedrive"
+        },
+        "overlay": {
+            "url": "https://adobe-commerce-api.adobeaem.workers.dev/hlxsites/commerce-hlx5/content/product/",
+            "type": "markup"
         }
     },
     "folders": {
