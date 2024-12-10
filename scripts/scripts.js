@@ -348,6 +348,7 @@ async function loadEager(doc) {
       document.head.appendChild(linkTag);
     }
 
+    preloadFile('/placeholders.json', 'fetch');
     preloadFile('/scripts/__dropins__/storefront-pdp/containers/ProductDetails.js', 'script');
     preloadFile('/scripts/__dropins__/storefront-pdp/api.js', 'script');
     preloadFile('/scripts/__dropins__/storefront-pdp/render.js', 'script');

@@ -14,7 +14,7 @@ import {
   loadErrorPage, performCatalogServiceQuery, variantsQuery,
 } from '../../scripts/commerce.js';
 import { getConfigValue } from '../../scripts/configs.js';
-import { fetchPlaceholders } from '../../scripts/aem.js';
+import { fetchPlaceholders, getMetadata } from '../../scripts/aem.js';
 
 async function addToCart({
   sku, quantity, optionsUIDs, product,
@@ -171,9 +171,12 @@ export default async function decorate(block) {
       return;
     }
 
-    setJsonLdProduct(product);
-    setMetaTags(product);
-    document.title = product.name;
+    // Only set metadata and LD+JSON for folder mapped PDPs
+    if (!getMetadata('sku')) {
+      setJsonLdProduct(product);
+      setMetaTags(product);
+      document.title = product.name;
+    }
   }, { eager: true });
 
   // Render Containers
