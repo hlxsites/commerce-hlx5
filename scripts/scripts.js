@@ -119,6 +119,185 @@ function preloadFile(href, as) {
   document.head.appendChild(link);
 }
 
+function parseVariants() {
+  const regex = /\b(\d+(\.\d{1,2})?)\b\s*([A-Z]{3})\b/;
+  return Array.from(document.querySelectorAll('.product-variants > div')).map((variantRow) => {
+    const columns = Array.from(variantRow.querySelectorAll(':scope > div')).map((col) => col.textContent.trim());
+
+    const regularPriceCol = columns[4];
+    const finalPriceCol = columns[5];
+    const regularPriceMatch = regularPriceCol.match(regex);
+    const finalPriceMatch = finalPriceCol.match(regex);
+
+    const variant = {
+      price: { roles: ['visible'] },
+    };
+    if (regularPriceMatch) {
+      variant.price.regular = {
+        amount: {
+          currency: regularPriceMatch[3],
+          value: parseFloat(regularPriceMatch[1]),
+        },
+      };
+    }
+    if (finalPriceMatch) {
+      variant.price.final = {
+        amount: {
+          currency: finalPriceMatch[3],
+          value: parseFloat(finalPriceMatch[1]),
+        },
+      };
+    }
+
+    return variant;
+  });
+}
+
+function computePriceRange(variants) {
+  const finalPriceValues = variants.map((v) => v.price.final.amount.value);
+  const regularPriceValues = variants.map((v) => v.price.regular.amount.value);
+
+  const minFinal = Math.min(...finalPriceValues);
+  const maxFinal = Math.max(...finalPriceValues);
+  const minRegular = Math.min(...regularPriceValues);
+  const maxRegular = Math.max(...regularPriceValues);
+  const { currency } = variants[0].price.final.amount;
+
+  return {
+    maximum: {
+      final: {
+        amount: {
+          value: maxFinal,
+          currency,
+        },
+      },
+      regular: {
+        amount: {
+          value: maxRegular,
+          currency,
+        },
+      },
+      roles: ['visible'],
+    },
+    minimum: {
+      final: {
+        amount: {
+          value: minFinal,
+          currency,
+        },
+      },
+      regular: {
+        amount: {
+          value: minRegular,
+          currency,
+        },
+      },
+      roles: ['visible'],
+    },
+  };
+}
+
+function parseProductData() {
+  const name = document.querySelector('h1')?.textContent?.trim() ?? '';
+
+  const descriptionParagraphs = document.querySelectorAll('main > div > p');
+  const description = Array.from(descriptionParagraphs).map((paragraph) => paragraph.innerHTML).join('<br/>');
+  const hasVariants = document.querySelector('.product-variants') !== null;
+
+  const attributes = Array.from(document.querySelectorAll('.product-attributes > div')).map((attributeRow) => {
+    const cells = attributeRow.querySelectorAll(':scope > div');
+    const [attributeName, attributeLabel, attributeValue] = Array.from(cells)
+      .map((cell) => cell.textContent.trim());
+
+    // TODO: This should probably be a ul/li list to better split the values
+    let value = attributeValue.split(',');
+    value = value.length === 1 ? value[0] : value;
+    return { name: attributeName, label: attributeLabel, value };
+  });
+
+  const images = Array.from(document.querySelectorAll('.product-images img')).map((img) => {
+    const src = new URL(img.getAttribute('src'), window.location);
+    // Clear query parameters
+    src.searchParams.delete('width');
+    src.searchParams.delete('format');
+    src.searchParams.delete('optimize');
+    const alt = img.getAttribute('alt') || '';
+    return { url: src.toString(), label: alt, roles: [] };
+  });
+
+  const product = {
+    __typename: hasVariants ? 'ComplexProductView' : 'SimpleProductView',
+    id: '',
+    externalId: getMetadata('externalid'),
+    sku: getMetadata('sku').toUpperCase(),
+    name,
+    description,
+    shortDescription: '',
+    url: getMetadata('og:url'),
+    urlKey: getMetadata('urlkey'),
+    inStock: getMetadata('instock') === 'true',
+    metaTitle: '',
+    metaKeyword: '',
+    metaDescription: '',
+    addToCartAllowed: getMetadata('addtocartallowed') === 'true',
+    images,
+    attributes,
+  };
+
+  if (hasVariants) {
+    // Add options
+    const options = [];
+    Array.from(document.querySelectorAll('.product-options > div')).forEach((optionRow) => {
+      const cells = Array.from(optionRow.querySelectorAll(':scope > div')).map((cell) => cell.textContent.trim());
+      if (cells[0].toLowerCase() !== 'option') {
+        const [id, title, typeName, type, multiple, required] = cells;
+        options.push({
+          id,
+          title,
+          typeName,
+          type,
+          multiple,
+          required,
+          values: [],
+        });
+      } else {
+        const [, valueId, valueTitle, value, selected, valueInStock] = cells;
+        if (valueId && options.length > 0) {
+          options[options.length - 1].values.push({
+            id: valueId,
+            title: valueTitle,
+            value: value ?? valueTitle,
+            type: 'TEXT', // TODO
+            selected,
+            inStock: valueInStock,
+          });
+        }
+      }
+    });
+    product.options = options;
+  }
+
+  if (!hasVariants) {
+    const priceValue = parseInt(getMetadata('product:price-amount'), 10);
+    let price = {};
+    if (!Number.isNaN(priceValue)) {
+      const currency = getMetadata('product:price-currency') || 'USD';
+      price = {
+        roles: ['visible'],
+        regular: { value: priceValue, currency },
+        final: { value: priceValue, currency },
+      };
+    }
+    product.price = price;
+  } else {
+    // Get all variant prices
+    const variants = parseVariants();
+    product.priceRange = computePriceRange(variants);
+  }
+
+  return product;
+}
+
 /**
  * Loads everything needed to get to LCP.
  * @param {Element} doc The container element
@@ -140,7 +319,32 @@ async function loadEager(doc) {
   window.adobeDataLayer = window.adobeDataLayer || [];
 
   let pageType = 'CMS';
-  if (document.body.querySelector('main .product-details')) {
+
+  // TODO: Parse content
+  const ogType = getMetadata('og:type');
+  const skuFromMetadata = getMetadata('sku');
+
+  if (ogType === 'product' && skuFromMetadata) {
+    pageType = 'Product';
+
+    window.getProductPromise = Promise.resolve(parseProductData());
+    const main = document.querySelector('main');
+
+    // Remove all other blocks
+    main.textContent = '';
+
+    // Create product-details block
+    const wrapper = document.createElement('div');
+    const block = buildBlock('product-details', '');
+    wrapper.append(block);
+    main.append(wrapper);
+
+    preloadFile('/scripts/__dropins__/storefront-pdp/containers/ProductDetails.js', 'script');
+    preloadFile('/scripts/__dropins__/storefront-pdp/api.js', 'script');
+    preloadFile('/scripts/__dropins__/storefront-pdp/render.js', 'script');
+    preloadFile('/scripts/__dropins__/storefront-pdp/chunks/initialize.js', 'script');
+    preloadFile('/scripts/__dropins__/storefront-pdp/chunks/getRefinedProduct.js', 'script');
+  } else if (document.body.querySelector('main .product-details')) {
     pageType = 'Product';
     const sku = getSkuFromUrl();
     window.getProductPromise = getProduct(sku);

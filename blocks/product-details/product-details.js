@@ -181,7 +181,7 @@ export default async function decorate(block) {
     setTimeout(async () => {
       try {
         await productRenderer.render(ProductDetails, {
-          sku: getSkuFromUrl(),
+          sku: product.sku ?? getSkuFromUrl(),
           carousel: {
             controls: {
               desktop: 'thumbnailsColumn',
