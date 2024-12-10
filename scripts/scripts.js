@@ -339,6 +339,15 @@ async function loadEager(doc) {
     wrapper.append(block);
     main.append(wrapper);
 
+    // Preload product image
+    const { images } = await window.getProductPromise;
+    if (images.length > 0) {
+      const primaryImageUrl = images[0].url;
+
+      const linkTag = document.createRange().createContextualFragment(`<link rel="preload" as="image" href="${primaryImageUrl}" imagesrcset="${primaryImageUrl}?auto=webp&amp;quality=80&amp;crop=false&amp;fit=cover&amp;width=384 768w, ${primaryImageUrl}?auto=webp&amp;quality=80&amp;crop=false&amp;fit=cover&amp;width=512 1024w, ${primaryImageUrl}?auto=webp&amp;quality=80&amp;crop=false&amp;fit=cover&amp;width=683 1366w, ${primaryImageUrl}?auto=webp&amp;quality=80&amp;crop=false&amp;fit=cover&amp;width=960 1920w">`);
+      document.head.appendChild(linkTag);
+    }
+
     preloadFile('/scripts/__dropins__/storefront-pdp/containers/ProductDetails.js', 'script');
     preloadFile('/scripts/__dropins__/storefront-pdp/api.js', 'script');
     preloadFile('/scripts/__dropins__/storefront-pdp/render.js', 'script');
