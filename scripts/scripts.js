@@ -261,13 +261,13 @@ function parseProductData() {
           values: [],
         });
       } else {
-        const [, valueId, valueTitle, value, selected, valueInStock] = cells;
+        const [, valueId, valueTitle, value, selected, valueInStock, valueType] = cells;
         if (valueId && options.length > 0) {
           options[options.length - 1].values.push({
             id: valueId,
             title: valueTitle,
             value: value ?? valueTitle,
-            type: 'TEXT', // TODO
+            type: valueType ?? 'TEXT',
             selected,
             inStock: valueInStock,
           });
